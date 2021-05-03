@@ -5906,7 +5906,7 @@ function correoValidado(array_correoHTML, entrega, numero, asig, dep, lv, obs_lv
       if (val_aprobacion == "Aprobado") {
         var datosDeptos = [];
         datosDeptos = deptoCE(proyectoFK); //Retorna nombre, correoRCE
-        //var txtHistorial = historial_CA(proyectoFK, entrega, numero);
+        var txtHistorial = historial_CA(proyectoFK, entrega, numero);
         MailApp.sendEmail({
           to: ("karen_maya@cuaieed.unam.mx"),
           subject: asuntoSA,
@@ -5915,7 +5915,7 @@ function correoValidado(array_correoHTML, entrega, numero, asig, dep, lv, obs_lv
             + "<br><br>" + cuerpoHTML
             + "<br><br>Saludos cordiales!!!"
             + "TO: " + datosDeptos[1]
-            + "<br><br>" + "txtHistorial"
+            + "<br><br>" + txtHistorial
         });
       } else {
         var nombreRemitente = remitenteEmail(array_correoHTML[6]);
@@ -6286,41 +6286,45 @@ function historial_CA(proyectoFK, elemento, numero) {
     }
 
     
-    for(let m = 0; m<arregloHistoriales.length; m++){
-      Logger.log("TIEMPO: "+arregloHistoriales[m][3])
-    if (arregloHistoriales[m][0] == "Correcciones" || arregloHistoriales[m][0] == "Revisión"
-    || arregloHistoriales[m][0] == "Entrega CE con comentarios"
-    || arregloHistoriales[m][0] == "Correcciones aplicadas") {
-    if (numero == 0) {
-      Logger.log("ENTRO A ESTE IF")
-      var stmt = conn2.createStatement();
-      for (let j = 0; j < nuevoElemento.length; j++) {
-        var conteo_solicitudes = stmt.executeQuery(`SELECT COUNT(*) FROM ORDEN 
-            JOIN SOLICITUD ON SOLICITUD.id = ORDEN.solicitudfk
-            JOIN AUXILIAR ON AUXILIAR.solicitudfk = SOLICITUD.id
-            where SOLICITUD.proyectofk = '${proyectoFK}'
-            and ORDEN.nombre = '${arregloHistoriales[m][0]}'
-            and (AUXILIAR.elemento LIKE "%${nuevoElemento[j]}%"
-            AND AUXILIAR.numero = 0
-            AND ORDEN.fechasistema <= '${arregloHistoriales[m][3]}');`);
-      }
-    } else {
-      var nuevoElemento = entrega.split(",");
-      var nuevoNumero = numero.split(",");
-      var stmt = conn2.createStatement();
-      for (let j = 0; j < nuevoElemento.length; j++) {
-        for (let k = 0; k < nuevoNumero.length; k++) {
+
+    Logger.log("TIEMPO: " + arregloHistoriales[i][3])
+    if (arregloHistoriales[i][0] == "Correcciones" || arregloHistoriales[i][0] == "Revisión"
+      || arregloHistoriales[i][0] == "Entrega CE con comentarios"
+      || arregloHistoriales[i][0] == "Correcciones aplicadas") {
+      if (numero == 0) {
+        Logger.log("ENTRO A ESTE IF");
+        var stmt = conn2.createStatement();
+        for (let j = 0; j < nuevoElemento.length; j++) {
           var conteo_solicitudes = stmt.executeQuery(`SELECT COUNT(*) FROM ORDEN 
             JOIN SOLICITUD ON SOLICITUD.id = ORDEN.solicitudfk
             JOIN AUXILIAR ON AUXILIAR.solicitudfk = SOLICITUD.id
+            JOIN VALIDACION ON VALIDACION.ordenfk = ORDEN.id
             where SOLICITUD.proyectofk = '${proyectoFK}'
-            and ORDEN.nombre = '${arregloHistoriales[m][0]}'
-            and (AUXILIAR.elemento LIKE "%${nuevoElemento[j]}%"
+            and VALIDACION.validacion = "Aprobado"
+            and ORDEN.nombre = '${arregloHistoriales[i][0]}'
+            and (AUXILIAR.elemento = "${nuevoElemento[j]}"
+            AND AUXILIAR.numero = 0
+            AND ORDEN.fechasistema <= '${arregloHistoriales[i][3]}');`);
+        }
+      } else {
+        var nuevoElemento = entrega.split(",");
+        var nuevoNumero = numero.split(",");
+        var stmt = conn2.createStatement();
+        for (let j = 0; j < nuevoElemento.length; j++) {
+          for (let k = 0; k < nuevoNumero.length; k++) {
+            var conteo_solicitudes = stmt.executeQuery(`SELECT COUNT(*) FROM ORDEN 
+            JOIN SOLICITUD ON SOLICITUD.id = ORDEN.solicitudfk
+            JOIN AUXILIAR ON AUXILIAR.solicitudfk = SOLICITUD.id
+            JOIN VALIDACION ON VALIDACION.ordenfk = ORDEN.id
+            where SOLICITUD.proyectofk = '${proyectoFK}'
+            and VALIDACION.validacion = "Aprobado"
+            and ORDEN.nombre = '${arregloHistoriales[i][0]}'
+            and (AUXILIAR.elemento = "${nuevoElemento[j]}"
             AND AUXILIAR.numero LIKE '%${numero[k]}%'
-            AND ORDEN.fechasistema <= '${arregloHistoriales[m][3]}');`);
+            AND ORDEN.fechasistema <= '${arregloHistoriales[i][3]}');`);
+          }
         }
       }
-    }      
     }
     var numCols = conteo_solicitudes.getMetaData().getColumnCount();
     while (conteo_solicitudes.next()) {
@@ -6329,231 +6333,458 @@ function historial_CA(proyectoFK, elemento, numero) {
         cont += conteo_solicitudes.getString(col + 1);
       }
     } //while            
-  }
-  Logger.log("Cont: "+cont)
 
+    Logger.log("Cont: " + cont)
 
-  if (asignatura == "") {
-    
-    if (num_elementos == 0) {
-     
-        //Sin asignatura y solo CG, SP, Escritorio
-        if ((arregloHistoriales[i][0] == "Correcciones" || arregloHistoriales[i][0] == "Revisión"
-          || arregloHistoriales[i][0] == "Entrega CE con comentarios"
-          || arregloHistoriales[i][0] == "Correcciones aplicadas") && (cont > 1)) {
-            cuerpoHistorial += "<br><br><table style='border:1px solid #000000; border-collapse:collapse;"
-          + "table-layout: fixed;width: 90% '>"
-          + "<tr><td colspan='3' style='border:1px solid #000000; padding:5px'>"
-          + "<strong>Orden de " + arregloHistoriales[i][0] + " " +cont + "</strong></td>"
-          + "<td colspan='3' style='border:1px solid #000000; padding:5px; text-align:right;'>"
-          + "<strong>Departamento de " + historialCorreccion[0] + "</strong></td></tr>"
-          + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
-          + "<strong>Dependencia</strong></td>"
-          + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[9] + "</td></tr>"
-          + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
-          + "<strong>" + "Asignatura" + "</strong></td>"
-          + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[5] + "</td></tr>"
-          + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
-          + "<strong>Semestre</strong></td>"
-          + "<td style='border:1px solid #000000; padding:5px'>" + historialCorreccion[6] + "</td>"
-          + "<td style='border:1px solid #000000; padding:5px; text-align:right;'>"
-          + "<strong>Total de " + historialCorreccion[7] + "</strong></td>"
-          + "<td style='border:1px solid #000000; padding:5px'>" + historialCorreccion[8]
-          + "</td><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
-          + "<strong>Entrega</strong></td>"
-          + "<td style='border:1px solid #000000; padding:5px'>" + elementos + "</td></tr>"
-          + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
-          + "<strong>Instrucciones</strong></td>"
-          + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[2] + "</td></tr>"
-          + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
-          + "<strong>Observaciones</strong></td>"
-          + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[3] + "</td></tr>"
-          + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
-          + "<strong>Ruta de descarga</strong></td>"
-          + "<td colspan='5' style='border:1px solid #000000; padding:5px'>"
-          + historialCorreccion[4] + "</td></tr></table>";
+    switch (arregloHistoriales[i][0]) {
+      case 'Entrega CE con comentarios':
+      case 'Revisión':
+      case 'Correcciones':
+      case "Correcciones aplicadas":
+        if (asignatura == "") {
+          //sin asignatura
+          if (num_elementos == 0) {
+            if (cont > 1) {
+              cuerpoHistorial += "<br><br><table style='border:1px solid #000000; border-collapse:collapse;"
+                + "table-layout: fixed;width: 90% '>"
+                + "<tr><td colspan='3' style='border:1px solid #000000; padding:5px'>"
+                + "<strong>Orden de " + arregloHistoriales[i][0] + " " + cont + "</strong></td>"
+                + "<td colspan='3' style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Departamento de " + historialCorreccion[0] + "</strong></td></tr>"
+                + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Dependencia</strong></td>"
+                + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[9] + "</td></tr>"
+                + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>" + "Asignatura" + "</strong></td>"
+                + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[5] + "</td></tr>"
+                + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Semestre</strong></td>"
+                + "<td style='border:1px solid #000000; padding:5px'>" + historialCorreccion[6] + "</td>"
+                + "<td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Total de " + historialCorreccion[7] + "</strong></td>"
+                + "<td style='border:1px solid #000000; padding:5px'>" + historialCorreccion[8]
+                + "</td><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Entrega</strong></td>"
+                + "<td style='border:1px solid #000000; padding:5px'>" + elementos + "</td></tr>"
+                + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Instrucciones</strong></td>"
+                + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[2] + "</td></tr>"
+                + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Observaciones</strong></td>"
+                + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[3] + "</td></tr>"
+                + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Ruta de descarga</strong></td>"
+                + "<td colspan='5' style='border:1px solid #000000; padding:5px'>"
+                + historialCorreccion[4] + "</td></tr></table>";
 
-        }else{
-          
-          //Sin asignatura y solo CG, SP, Escritorio
-            cuerpoHistorial += "<br><br><table style='border:1px solid #000000; border-collapse:collapse;"
-          + "table-layout: fixed;width: 90% '>"
-          + "<tr><td colspan='3' style='border:1px solid #000000; padding:5px'>"
-          + "<strong>Orden de " + arregloHistoriales[i][0] + "</strong></td>"
-          + "<td colspan='3' style='border:1px solid #000000; padding:5px; text-align:right;'>"
-          + "<strong>Departamento de " + historialCorreccion[0] + "</strong></td></tr>"
-          + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
-          + "<strong>Dependencia</strong></td>"
-          + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[9] + "</td></tr>"
-          + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
-          + "<strong>" + "Asignatura" + "</strong></td>"
-          + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[5] + "</td></tr>"
-          + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
-          + "<strong>Semestre</strong></td>"
-          + "<td style='border:1px solid #000000; padding:5px'>" + historialCorreccion[6] + "</td>"
-          + "<td style='border:1px solid #000000; padding:5px; text-align:right;'>"
-          + "<strong>Total de " + historialCorreccion[7] + "</strong></td>"
-          + "<td style='border:1px solid #000000; padding:5px'>" + historialCorreccion[8]
-          + "</td><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
-          + "<strong>Entrega</strong></td>"
-          + "<td style='border:1px solid #000000; padding:5px'>" + elementos + "</td></tr>"
-          + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
-          + "<strong>Instrucciones</strong></td>"
-          + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[2] + "</td></tr>"
-          + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
-          + "<strong>Observaciones</strong></td>"
-          + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[3] + "</td></tr>"
-          + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
-          + "<strong>Ruta de descarga</strong></td>"
-          + "<td colspan='5' style='border:1px solid #000000; padding:5px'>"
-          + historialCorreccion[4] + "</td></tr></table>";
+            } else {
+              //cont 1
+              cuerpoHistorial += "<br><br><table style='border:1px solid #000000; border-collapse:collapse;"
+                + "table-layout: fixed;width: 90% '>"
+                + "<tr><td colspan='3' style='border:1px solid #000000; padding:5px'>"
+                + "<strong>Orden de " + arregloHistoriales[i][0] + "</strong></td>"
+                + "<td colspan='3' style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Departamento de " + historialCorreccion[0] + "</strong></td></tr>"
+                + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Dependencia</strong></td>"
+                + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[9] + "</td></tr>"
+                + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>" + "Asignatura" + "</strong></td>"
+                + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[5] + "</td></tr>"
+                + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Semestre</strong></td>"
+                + "<td style='border:1px solid #000000; padding:5px'>" + historialCorreccion[6] + "</td>"
+                + "<td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Total de " + historialCorreccion[7] + "</strong></td>"
+                + "<td style='border:1px solid #000000; padding:5px'>" + historialCorreccion[8]
+                + "</td><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Entrega</strong></td>"
+                + "<td style='border:1px solid #000000; padding:5px'>" + elementos + "</td></tr>"
+                + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Instrucciones</strong></td>"
+                + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[2] + "</td></tr>"
+                + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Observaciones</strong></td>"
+                + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[3] + "</td></tr>"
+                + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Ruta de descarga</strong></td>"
+                + "<td colspan='5' style='border:1px solid #000000; padding:5px'>"
+                + historialCorreccion[4] + "</td></tr></table>";
 
+            }
+          } else {
+            //mezclados sin asignatura
+            if (cont > 1) {
+              cuerpoHistorial += "<br><br><table style='border:1px solid #000000; border-collapse:collapse;"
+                + "table-layout: fixed;width: 90% '>"
+                + "<tr><td colspan='3' style='border:1px solid #000000; padding:5px'>"
+                + "<strong>Orden de " + arregloHistoriales[i][0] + " " + cont + "</strong></td>"
+                + "<td colspan='3' style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Departamento de " + historialCorreccion[0] + "</strong></td></tr>"
+                + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Dependencia</strong></td>"
+                + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[9] + "</td></tr>"
+                + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>" + "Asignatura" + "</strong></td>"
+                + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[5] + "</td></tr>"
+                + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Semestre</strong></td>"
+                + "<td style='border:1px solid #000000; padding:5px'>" + historialCorreccion[6] + "</td>"
+                + "<td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Total de " + historialCorreccion[7] + "</strong></td>"
+                + "<td style='border:1px solid #000000; padding:5px'>" + historialCorreccion[8]
+                + "</td><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Entrega</strong></td>"
+                + "<td style='border:1px solid #000000; padding:5px'>" + elementos + num_elementos + "</td></tr>"
+                + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Instrucciones</strong></td>"
+                + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[2] + "</td></tr>"
+                + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Observaciones</strong></td>"
+                + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[3] + "</td></tr>"
+                + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Ruta de descarga</strong></td>"
+                + "<td colspan='5' style='border:1px solid #000000; padding:5px'>"
+                + historialCorreccion[4] + "</td></tr></table>";
+
+            } else {
+              cuerpoHistorial += "<br><br><table style='border:1px solid #000000; border-collapse:collapse;"
+                + "table-layout: fixed;width: 90% '>"
+                + "<tr><td colspan='3' style='border:1px solid #000000; padding:5px'>"
+                + "<strong>Orden de " + arregloHistoriales[i][0] + "</strong></td>"
+                + "<td colspan='3' style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Departamento de " + historialCorreccion[0] + "</strong></td></tr>"
+                + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Dependencia</strong></td>"
+                + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[9] + "</td></tr>"
+                + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>" + "Asignatura" + "</strong></td>"
+                + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[5] + "</td></tr>"
+                + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Semestre</strong></td>"
+                + "<td style='border:1px solid #000000; padding:5px'>" + historialCorreccion[6] + "</td>"
+                + "<td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Total de " + historialCorreccion[7] + "</strong></td>"
+                + "<td style='border:1px solid #000000; padding:5px'>" + historialCorreccion[8]
+                + "</td><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Entrega</strong></td>"
+                + "<td style='border:1px solid #000000; padding:5px'>" + elementos + num_elementos + "</td></tr>"
+                + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Instrucciones</strong></td>"
+                + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[2] + "</td></tr>"
+                + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Observaciones</strong></td>"
+                + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[3] + "</td></tr>"
+                + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Ruta de descarga</strong></td>"
+                + "<td colspan='5' style='border:1px solid #000000; padding:5px'>"
+                + historialCorreccion[4] + "</td></tr></table>";
+
+            }
           }
-    }else{
+        } else {
+          //con asignatura
+          if (num_elementos == 0) {
+            if (cont > 1) {
+              cuerpoHistorial += "<br><br><table style='border:1px solid #000000; border-collapse:collapse;"
+                + "table-layout: fixed;width: 90% '>"
+                + "<tr><td colspan='3' style='border:1px solid #000000; padding:5px'>"
+                + "<strong>Orden de " + arregloHistoriales[i][0] + " " + cont + "</strong></td>"
+                + "<td colspan='3' style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Departamento de " + historialCorreccion[0] + "</strong></td></tr>"
+                + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Dependencia</strong></td>"
+                + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[9] + "</td></tr>"
+                + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>" + "Asignatura" + "</strong></td>"
+                + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[5]
+                + " / " + asignatura + "</td></tr>"
+                + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Semestre</strong></td>"
+                + "<td style='border:1px solid #000000; padding:5px'>" + historialCorreccion[6] + "</td>"
+                + "<td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Total de " + historialCorreccion[7] + "</strong></td>"
+                + "<td style='border:1px solid #000000; padding:5px'>" + historialCorreccion[8]
+                + "</td><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Entrega</strong></td>"
+                + "<td style='border:1px solid #000000; padding:5px'>" + elementos + "</td></tr>"
+                + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Instrucciones</strong></td>"
+                + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[2] + "</td></tr>"
+                + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Observaciones</strong></td>"
+                + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[3] + "</td></tr>"
+                + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Ruta de descarga</strong></td>"
+                + "<td colspan='5' style='border:1px solid #000000; padding:5px'>"
+                + historialCorreccion[4] + "</td></tr></table>";
+
+            } else {
+              //cont 1
+              cuerpoHistorial += "<br><br><table style='border:1px solid #000000; border-collapse:collapse;"
+                + "table-layout: fixed;width: 90% '>"
+                + "<tr><td colspan='3' style='border:1px solid #000000; padding:5px'>"
+                + "<strong>Orden de " + arregloHistoriales[i][0] + "</strong></td>"
+                + "<td colspan='3' style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Departamento de " + historialCorreccion[0] + "</strong></td></tr>"
+                + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Dependencia</strong></td>"
+                + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[9] + "</td></tr>"
+                + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>" + "Asignatura" + "</strong></td>"
+                + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[5]
+                + " / " + asignatura + "</td></tr>"
+                + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Semestre</strong></td>"
+                + "<td style='border:1px solid #000000; padding:5px'>" + historialCorreccion[6] + "</td>"
+                + "<td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Total de " + historialCorreccion[7] + "</strong></td>"
+                + "<td style='border:1px solid #000000; padding:5px'>" + historialCorreccion[8]
+                + "</td><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Entrega</strong></td>"
+                + "<td style='border:1px solid #000000; padding:5px'>" + elementos + "</td></tr>"
+                + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Instrucciones</strong></td>"
+                + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[2] + "</td></tr>"
+                + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Observaciones</strong></td>"
+                + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[3] + "</td></tr>"
+                + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Ruta de descarga</strong></td>"
+                + "<td colspan='5' style='border:1px solid #000000; padding:5px'>"
+                + historialCorreccion[4] + "</td></tr></table>";
+
+            }
+          } else {
+            //mezclados sin asignatura
+            if (cont > 1) {
+              cuerpoHistorial += "<br><br><table style='border:1px solid #000000; border-collapse:collapse;"
+                + "table-layout: fixed;width: 90% '>"
+                + "<tr><td colspan='3' style='border:1px solid #000000; padding:5px'>"
+                + "<strong>Orden de " + arregloHistoriales[i][0] + " " + cont + "</strong></td>"
+                + "<td colspan='3' style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Departamento de " + historialCorreccion[0] + "</strong></td></tr>"
+                + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Dependencia</strong></td>"
+                + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[9] + "</td></tr>"
+                + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>" + "Asignatura" + "</strong></td>"
+                + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[5]
+                + " / " + asignatura + "</td></tr>"
+                + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Semestre</strong></td>"
+                + "<td style='border:1px solid #000000; padding:5px'>" + historialCorreccion[6] + "</td>"
+                + "<td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Total de " + historialCorreccion[7] + "</strong></td>"
+                + "<td style='border:1px solid #000000; padding:5px'>" + historialCorreccion[8]
+                + "</td><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Entrega</strong></td>"
+                + "<td style='border:1px solid #000000; padding:5px'>" + elementos + num_elementos + "</td></tr>"
+                + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Instrucciones</strong></td>"
+                + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[2] + "</td></tr>"
+                + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Observaciones</strong></td>"
+                + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[3] + "</td></tr>"
+                + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Ruta de descarga</strong></td>"
+                + "<td colspan='5' style='border:1px solid #000000; padding:5px'>"
+                + historialCorreccion[4] + "</td></tr></table>";
+
+            } else {
+              cuerpoHistorial += "<br><br><table style='border:1px solid #000000; border-collapse:collapse;"
+                + "table-layout: fixed;width: 90% '>"
+                + "<tr><td colspan='3' style='border:1px solid #000000; padding:5px'>"
+                + "<strong>Orden de " + arregloHistoriales[i][0] + "</strong></td>"
+                + "<td colspan='3' style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Departamento de " + historialCorreccion[0] + "</strong></td></tr>"
+                + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Dependencia</strong></td>"
+                + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[9] + "</td></tr>"
+                + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>" + "Asignatura" + "</strong></td>"
+                + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[5]
+                + " / " + asignatura + "</td></tr>"
+                + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Semestre</strong></td>"
+                + "<td style='border:1px solid #000000; padding:5px'>" + historialCorreccion[6] + "</td>"
+                + "<td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Total de " + historialCorreccion[7] + "</strong></td>"
+                + "<td style='border:1px solid #000000; padding:5px'>" + historialCorreccion[8]
+                + "</td><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Entrega</strong></td>"
+                + "<td style='border:1px solid #000000; padding:5px'>" + elementos + num_elementos + "</td></tr>"
+                + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Instrucciones</strong></td>"
+                + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[2] + "</td></tr>"
+                + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Observaciones</strong></td>"
+                + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[3] + "</td></tr>"
+                + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+                + "<strong>Ruta de descarga</strong></td>"
+                + "<td colspan='5' style='border:1px solid #000000; padding:5px'>"
+                + historialCorreccion[4] + "</td></tr></table>";
+
+            }
+          }
+        }
+
+        break;
+      case "Corrección":
+      case "Integración":
+      case "Integración finalidada":
+      case "Programación finalizada":
+      case 'Programación':
+      case 'Liberación':
+      case 'Actualización':
+      case 'Actualización finalizada':
+        if (asignatura == "") {
+          //sin asignatura
+          if (num_elementos == 0) {
             cuerpoHistorial += "<br><br><table style='border:1px solid #000000; border-collapse:collapse;"
-          + "table-layout: fixed;width: 90% '>"
-          + "<tr><td colspan='3' style='border:1px solid #000000; padding:5px'>"
-          + "<strong>Orden de " + arregloHistoriales[i][0] + "</strong></td>"
-          + "<td colspan='3' style='border:1px solid #000000; padding:5px; text-align:right;'>"
-          + "<strong>Departamento de " + historialCorreccion[0] + "</strong></td></tr>"
-          + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
-          + "<strong>Dependencia</strong></td>"
-          + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[9] + "</td></tr>"
-          + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
-          + "<strong>" + "Asignatura" + "</strong></td>"
-          + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[5] + "</td></tr>"
-          + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
-          + "<strong>Semestre</strong></td>"
-          + "<td style='border:1px solid #000000; padding:5px'>" + historialCorreccion[6] + "</td>"
-          + "<td style='border:1px solid #000000; padding:5px; text-align:right;'>"
-          + "<strong>Total de " + historialCorreccion[7] + "</strong></td>"
-          + "<td style='border:1px solid #000000; padding:5px'>" + historialCorreccion[8]
-          + "</td><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
-          + "<strong>Entrega</strong></td>"
-          + "<td style='border:1px solid #000000; padding:5px'>" + elementos + "</td></tr>"
-          + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
-          + "<strong>Instrucciones</strong></td>"
-          + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[2] + "</td></tr>"
-          + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
-          + "<strong>Observaciones</strong></td>"
-          + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[3] + "</td></tr>"
-          + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
-          + "<strong>Ruta de descarga</strong></td>"
-          + "<td colspan='5' style='border:1px solid #000000; padding:5px'>"
-          + historialCorreccion[4] + "</td></tr></table>";      
+              + "table-layout: fixed;width: 90% '>"
+              + "<tr><td colspan='3' style='border:1px solid #000000; padding:5px'>"
+              + "<strong>Orden de " + arregloHistoriales[i][0] + "</strong></td>"
+              + "<td colspan='3' style='border:1px solid #000000; padding:5px; text-align:right;'>"
+              + "<strong>Departamento de " + historialCorreccion[0] + "</strong></td></tr>"
+              + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+              + "<strong>Dependencia</strong></td>"
+              + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[9] + "</td></tr>"
+              + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+              + "<strong>" + "Asignatura" + "</strong></td>"
+              + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[5] + "</td></tr>"
+              + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+              + "<strong>Semestre</strong></td>"
+              + "<td style='border:1px solid #000000; padding:5px'>" + historialCorreccion[6] + "</td>"
+              + "<td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+              + "<strong>Total de " + historialCorreccion[7] + "</strong></td>"
+              + "<td style='border:1px solid #000000; padding:5px'>" + historialCorreccion[8]
+              + "</td><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+              + "<strong>Entrega</strong></td>"
+              + "<td style='border:1px solid #000000; padding:5px'>" + elementos + "</td></tr>"
+              + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+              + "<strong>Instrucciones</strong></td>"
+              + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[2] + "</td></tr>"
+              + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+              + "<strong>Observaciones</strong></td>"
+              + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[3] + "</td></tr>"
+              + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+              + "<strong>Ruta de descarga</strong></td>"
+              + "<td colspan='5' style='border:1px solid #000000; padding:5px'>"
+              + historialCorreccion[4] + "</td></tr></table>";
+          } else {
+            //mezclados sin asignatura
+            cuerpoHistorial += "<br><br><table style='border:1px solid #000000; border-collapse:collapse;"
+              + "table-layout: fixed;width: 90% '>"
+              + "<tr><td colspan='3' style='border:1px solid #000000; padding:5px'>"
+              + "<strong>Orden de " + arregloHistoriales[i][0] + "</strong></td>"
+              + "<td colspan='3' style='border:1px solid #000000; padding:5px; text-align:right;'>"
+              + "<strong>Departamento de " + historialCorreccion[0] + "</strong></td></tr>"
+              + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+              + "<strong>Dependencia</strong></td>"
+              + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[9] + "</td></tr>"
+              + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+              + "<strong>" + "Asignatura" + "</strong></td>"
+              + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[5] + "</td></tr>"
+              + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+              + "<strong>Semestre</strong></td>"
+              + "<td style='border:1px solid #000000; padding:5px'>" + historialCorreccion[6] + "</td>"
+              + "<td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+              + "<strong>Total de " + historialCorreccion[7] + "</strong></td>"
+              + "<td style='border:1px solid #000000; padding:5px'>" + historialCorreccion[8]
+              + "</td><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+              + "<strong>Entrega</strong></td>"
+              + "<td style='border:1px solid #000000; padding:5px'>" + elementos + num_elementos + "</td></tr>"
+              + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+              + "<strong>Instrucciones</strong></td>"
+              + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[2] + "</td></tr>"
+              + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+              + "<strong>Observaciones</strong></td>"
+              + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[3] + "</td></tr>"
+              + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+              + "<strong>Ruta de descarga</strong></td>"
+              + "<td colspan='5' style='border:1px solid #000000; padding:5px'>"
+              + historialCorreccion[4] + "</td></tr></table>";
+          }
+        } else {
+          //con asignatura
+          if (num_elementos == 0) {
+            cuerpoHistorial += "<br><br><table style='border:1px solid #000000; border-collapse:collapse;"
+              + "table-layout: fixed;width: 90% '>"
+              + "<tr><td colspan='3' style='border:1px solid #000000; padding:5px'>"
+              + "<strong>Orden de " + arregloHistoriales[i][0] + "</strong></td>"
+              + "<td colspan='3' style='border:1px solid #000000; padding:5px; text-align:right;'>"
+              + "<strong>Departamento de " + historialCorreccion[0] + "</strong></td></tr>"
+              + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+              + "<strong>Dependencia</strong></td>"
+              + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[9] + "</td></tr>"
+              + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+              + "<strong>" + "Asignatura" + "</strong></td>"
+              + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[5]
+              + " / " + asignatura + "</td></tr>"
+              + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+              + "<strong>Semestre</strong></td>"
+              + "<td style='border:1px solid #000000; padding:5px'>" + historialCorreccion[6] + "</td>"
+              + "<td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+              + "<strong>Total de " + historialCorreccion[7] + "</strong></td>"
+              + "<td style='border:1px solid #000000; padding:5px'>" + historialCorreccion[8]
+              + "</td><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+              + "<strong>Entrega</strong></td>"
+              + "<td style='border:1px solid #000000; padding:5px'>" + elementos + "</td></tr>"
+              + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+              + "<strong>Instrucciones</strong></td>"
+              + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[2] + "</td></tr>"
+              + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+              + "<strong>Observaciones</strong></td>"
+              + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[3] + "</td></tr>"
+              + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+              + "<strong>Ruta de descarga</strong></td>"
+              + "<td colspan='5' style='border:1px solid #000000; padding:5px'>"
+              + historialCorreccion[4] + "</td></tr></table>";
+
+          } else {
+            //mezclados con asignatura
+            cuerpoHistorial += "<br><br><table style='border:1px solid #000000; border-collapse:collapse;"
+              + "table-layout: fixed;width: 90% '>"
+              + "<tr><td colspan='3' style='border:1px solid #000000; padding:5px'>"
+              + "<strong>Orden de " + arregloHistoriales[i][0] + "</strong></td>"
+              + "<td colspan='3' style='border:1px solid #000000; padding:5px; text-align:right;'>"
+              + "<strong>Departamento de " + historialCorreccion[0] + "</strong></td></tr>"
+              + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+              + "<strong>Dependencia</strong></td>"
+              + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[9] + "</td></tr>"
+              + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+              + "<strong>" + "Asignatura" + "</strong></td>"
+              + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[5]
+              + " / " + asignatura + "</td></tr>"
+              + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+              + "<strong>Semestre</strong></td>"
+              + "<td style='border:1px solid #000000; padding:5px'>" + historialCorreccion[6] + "</td>"
+              + "<td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+              + "<strong>Total de " + historialCorreccion[7] + "</strong></td>"
+              + "<td style='border:1px solid #000000; padding:5px'>" + historialCorreccion[8]
+              + "</td><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+              + "<strong>Entrega</strong></td>"
+              + "<td style='border:1px solid #000000; padding:5px'>" + elementos + num_elementos + "</td></tr>"
+              + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+              + "<strong>Instrucciones</strong></td>"
+              + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[2] + "</td></tr>"
+              + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+              + "<strong>Observaciones</strong></td>"
+              + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[3] + "</td></tr>"
+              + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
+              + "<strong>Ruta de descarga</strong></td>"
+              + "<td colspan='5' style='border:1px solid #000000; padding:5px'>"
+              + historialCorreccion[4] + "</td></tr></table>";
+          }
+        }
+        break;
+      default:
+        Logger.log("Arreglo de Historiales conteo")
+        break;
     }
 
-  }else{
-    if (num_elementos == 0) {
-      
-        //Con asignatura y solo CG, SP, Escritorio
-        if ((arregloHistoriales[i][0] == "Correcciones" || arregloHistoriales[i][0] == "Revisión"
-          || arregloHistoriales[i][0] == "Entrega CE con comentarios"
-          || arregloHistoriales[i][0] == "Correcciones aplicadas") && (cont > 1)) {
-            cuerpoHistorial += "<br><br><table style='border:1px solid #000000; border-collapse:collapse;"
-          + "table-layout: fixed;width: 90% '>"
-          + "<tr><td colspan='3' style='border:1px solid #000000; padding:5px'>"
-          + "<strong>Orden de " + arregloHistoriales[i][0] + " " +cont + "</strong></td>"
-          + "<td colspan='3' style='border:1px solid #000000; padding:5px; text-align:right;'>"
-          + "<strong>Departamento de " + historialCorreccion[0] + "</strong></td></tr>"
-          + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
-          + "<strong>Dependencia</strong></td>"
-          + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[9] + "</td></tr>"
-          + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
-          + "<strong>" + "Asignatura" + "</strong></td>"
-          + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[5] + " / "
-          + asignatura + "</td></tr>"
-          + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
-          + "<strong>Semestre</strong></td>"
-          + "<td style='border:1px solid #000000; padding:5px'>" + historialCorreccion[6] + "</td>"
-          + "<td style='border:1px solid #000000; padding:5px; text-align:right;'>"
-          + "<strong>Total de " + historialCorreccion[7] + "</strong></td>"
-          + "<td style='border:1px solid #000000; padding:5px'>" + historialCorreccion[8]
-          + "</td><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
-          + "<strong>Entrega</strong></td>"
-          + "<td style='border:1px solid #000000; padding:5px'>" + elementos + "</td></tr>"
-          + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
-          + "<strong>Instrucciones</strong></td>"
-          + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[2] + "</td></tr>"
-          + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
-          + "<strong>Observaciones</strong></td>"
-          + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[3] + "</td></tr>"
-          + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
-          + "<strong>Ruta de descarga</strong></td>"
-          + "<td colspan='5' style='border:1px solid #000000; padding:5px'>"
-          + historialCorreccion[4] + "</td></tr></table>";
 
-        }else{
-          
-          //Con asignatura y solo CG, SP, Esc
-        cuerpoHistorial += "<br><br><table style='border:1px solid #000000; border-collapse:collapse;"
-          + "table-layout: fixed;width: 90% '>"
-          + "<tr><td colspan='3' style='border:1px solid #000000; padding:5px'>"
-          + "<strong>Orden de " + arregloHistoriales[i][0] + "</strong></td>"
-          + "<td colspan='3' style='border:1px solid #000000; padding:5px; text-align:right;'>"
-          + "<strong>Departamento de " + historialCorreccion[0] + "</strong></td></tr>"
-          + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
-          + "<strong>Dependencia</strong></td>"
-          + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[9] + "</td></tr>"
-          + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
-          + "<strong>" + "Asignatura" + "</strong></td>"
-          + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[5] + " / "
-          + asignatura + "</td></tr>"
-          + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
-          + "<strong>Semestre</strong></td>"
-          + "<td style='border:1px solid #000000; padding:5px'>" + historialCorreccion[6] + "</td>"
-          + "<td style='border:1px solid #000000; padding:5px; text-align:right;'>"
-          + "<strong>Total de " + historialCorreccion[7] + "</strong></td>"
-          + "<td style='border:1px solid #000000; padding:5px'>" + historialCorreccion[8]
-          + "</td><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
-          + "<strong>Entrega</strong></td>"
-          + "<td style='border:1px solid #000000; padding:5px'>" + elementos + "</td></tr>"
-          + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
-          + "<strong>Instrucciones</strong></td>"
-          + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[2] + "</td></tr>"
-          + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
-          + "<strong>Observaciones</strong></td>"
-          + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[3] + "</td></tr>"
-          + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
-          + "<strong>Ruta de descarga</strong></td>"
-          + "<td colspan='5' style='border:1px solid #000000; padding:5px'>"
-          + historialCorreccion[4] + "</td></tr></table>";
-
-          }
-    } else{
-          cuerpoHistorial += "<br><br><table style='border:1px solid #000000; border-collapse:collapse;"
-          + "table-layout: fixed;width: 90% '>"
-          + "<tr><td colspan='3' style='border:1px solid #000000; padding:5px'>"
-          + "<strong>Orden de " + arregloHistoriales[i][0] + "</strong></td>"
-          + "<td colspan='3' style='border:1px solid #000000; padding:5px; text-align:right;'>"
-          + "<strong>Departamento de " + historialCorreccion[0] + "</strong></td></tr>"
-          + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
-          + "<strong>Dependencia</strong></td>"
-          + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[9] + "</td></tr>"
-          + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
-          + "<strong>" + "Asignatura" + "</strong></td>"
-          + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[5] + "</td></tr>"
-          + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
-          + "<strong>Semestre</strong></td>"
-          + "<td style='border:1px solid #000000; padding:5px'>" + historialCorreccion[6] + "</td>"
-          + "<td style='border:1px solid #000000; padding:5px; text-align:right;'>"
-          + "<strong>Total de " + historialCorreccion[7] + "</strong></td>"
-          + "<td style='border:1px solid #000000; padding:5px'>" + historialCorreccion[8]
-          + "</td><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
-          + "<strong>Entrega</strong></td>"
-          + "<td style='border:1px solid #000000; padding:5px'>" + elementos + num_elementos + "</td></tr>"
-          + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
-          + "<strong>Instrucciones</strong></td>"
-          + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[2] + "</td></tr>"
-          + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
-          + "<strong>Observaciones</strong></td>"
-          + "<td colspan='5' style='border:1px solid #000000; padding:5px'>" + historialCorreccion[3] + "</td></tr>"
-          + "<tr><td style='border:1px solid #000000; padding:5px; text-align:right;'>"
-          + "<strong>Ruta de descarga</strong></td>"
-          + "<td colspan='5' style='border:1px solid #000000; padding:5px'>"
-          + historialCorreccion[4] + "</td></tr></table>";
-    }  
-  }
 
     switch (arregloHistoriales[i][0]) {
       case "Corrección":
@@ -6755,7 +6986,7 @@ function historial_CA(proyectoFK, elemento, numero) {
         break;
     }
 
-  }//for
+  }//for arreglo de historiales
   return cuerpoHistorial
 
 }
