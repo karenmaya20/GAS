@@ -1,0 +1,499 @@
+/*
+var connectionName = 'seguimientodeproyectos:us-west2:seguimientodeproyectos'; //instancia
+var db = 'proyectos2'; //nombre de la base a creada
+// CREDENCIALES 
+var root = 'root';
+var rootPwd = 'root';
+// var user = 'sp'; 
+// var userPwd = 'root';
+
+var instanceUrl = 'jdbc:google:mysql://' + connectionName;
+var dbUrl = instanceUrl + '/' + db;
+
+var conn2 = Jdbc.getCloudSqlConnection(dbUrl, root, rootPwd);
+*/
+var respuestas = {}
+var form = FormApp.openById('1fo8JYZ_4KN5O9JY6yKyxHUgxaBDMsVfrlv_a-CBtvOg');
+
+function guardarDatos() {
+  var formResponses = form.getResponses();
+  form.setAllowResponseEdits(true)//habilita la opción de recuperar las respuestas
+  //var stmt = conn2.createStatement();
+  respuestas = {}
+  var formResponse = formResponses[formResponses.length - 1];//obtiene el ultimo registro del formulario
+  var itemResponses = formResponse.getItemResponses();
+  for (var j = 0; j < itemResponses.length; j++) {
+    var itemResponse = itemResponses[j];
+    switch (j) {
+      case 0.0:
+        respuestas.dato0 = itemResponse.getResponse();
+        break;
+      case 1.0:
+        respuestas.dato1 = itemResponse.getResponse();
+        break;
+      case 2.0:
+        respuestas.dato2 = itemResponse.getResponse();
+        break;
+      case 3.0:
+        respuestas.dato3 = itemResponse.getResponse();
+        break;
+      case 4.0:
+        respuestas.dato4 = itemResponse.getResponse();
+        break;
+      case 5.0:
+        respuestas.dato5 = itemResponse.getResponse();
+        break;
+      case 6.0:
+        respuestas.dato6 = itemResponse.getResponse();
+        break;
+      case 7.0:
+        respuestas.dato7 = itemResponse.getResponse();
+        break;
+      case 8.0:
+        respuestas.dato8 = itemResponse.getResponse();
+        break;
+      case 9.0:
+        respuestas.dato9 = itemResponse.getResponse();
+        break;
+      case 10.0:
+        respuestas.dato10 = itemResponse.getResponse();
+        break;
+      case 11.0:
+        respuestas.dato11 = itemResponse.getResponse();
+        break;
+      case 12.0:
+        respuestas.dato12 = itemResponse.getResponse();
+        break;
+      case 13.0:
+        respuestas.dato13 = itemResponse.getResponse();
+        break;
+      case 14.0:
+        respuestas.dato14 = itemResponse.getResponse();
+        break;
+      case 15.0:
+        respuestas.dato15 = itemResponse.getResponse();
+        break;
+      case 16.0:
+        respuestas.dato16 = itemResponse.getResponse();
+        break;
+      case 17.0:
+        respuestas.dato17 = itemResponse.getResponse();
+        break;
+      case 18.0:
+        respuestas.dato18 = itemResponse.getResponse();
+        break;
+      case 19.0:
+        respuestas.dato19 = itemResponse.getResponse();
+        break;
+      case 20.0:
+        respuestas.dato20 = itemResponse.getResponse();
+        break;
+      default:
+        Logger.log("Otro");
+        break;
+    }
+  } //itemResponses
+
+  Logger.log(Object.keys(respuestas).length);
+  Logger.log((respuestas));
+  //dato0, dato1 las foraneas
+  if (Object.keys(respuestas).length == 21.0) {
+
+    var stmt = conn2.createStatement();
+    //Query para obtener el id de la dependencia
+    var nombreDependencia = stmt.executeQuery(`select id from DEPENDENCIA where (nombre='${respuestas.dato0}')`);
+    var numCols = nombreDependencia.getMetaData().getColumnCount();
+    while (nombreDependencia.next()) {
+      var dependencia_id = '';
+      for (var col = 0; col < numCols; col++) {
+        dependencia_id += nombreDependencia.getString(col + 1) + "\n";
+      }
+    } //while
+
+    //Inserción en asignatura
+    var results = conn2.prepareStatement('INSERT INTO PROYECTO ' +
+      '(nombre, inicial_proy, dependenciafk)' +
+      'values (?, ?, ?)');
+    results.setString(1, respuestas.dato1);
+    results.setString(2, respuestas.dato1.replace(' de ', '').split(/\s/).reduce((response, Word) => response += Word.slice(0, 1), ''));
+    results.setString(3, dependencia_id);
+    results.execute();
+
+    var maximo = stmt.executeQuery('select last_insert_id();');
+    maximo.next();
+    var proyectolast = maximo.getString(1); //proyecto_id
+
+    //Inserción en asignatura
+    var results = conn2.prepareStatement('INSERT INTO ASIGNATURA ' +
+      '(asignatura, dependenciafk, proyectofk)' +
+      'values (?, ?, ?)');
+    results.setString(1, respuestas.dato2);
+    results.setString(2, dependencia_id);
+    results.setString(3, proyectolast);
+    results.execute();
+
+    var maximo = stmt.executeQuery('select last_insert_id();');
+    maximo.next();
+    var asignaturalast = maximo.getString(1); //asignatura_id
+
+    var colaboradores = stmt.executeQuery(`select id from COLABORDOR_BASE 
+    where (nombre='${respuestas.dato10}' and nombre='${respuestas.dato11}' and nombre='${respuestas.dato12}' 
+    and nombre='${respuestas.dato14}' and nombre='${respuestas.dato16}' and nombre='${respuestas.dato17}')`);
+
+    var colabo_array = [];
+    while (colaboradores.next()) {
+      for (var x = 1; x <= colaboradores.getMetaData().getColumnCount(); x++) {
+        colabo_array.push(colaboradores.getString(x));
+      }
+    }
+    var results = conn2.prepareStatement('INSERT INTO COLABORADOR ' +
+      '(academico, correo, listadistribucion, admin, RDI, CDI, RCE, RCV, CCV) values (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+    results.setString(1, respuestas.dato7);
+    results.setString(2, respuestas.dato8);
+    results.setString(3, respuestas.dato9);
+    results.setString(4, colabo_array[0]);
+    results.setString(5, colabo_array[1]);
+    results.setString(6, colabo_array[2]);
+    results.setString(7, colabo_array[3]);
+    results.setString(8, colabo_array[4]);
+    results.setString(9, colabo_array[5]);
+    results.execute();
+
+    var maximo = stmt.executeQuery('select last_insert_id();');
+    maximo.next();
+    var colaboradorlast = maximo.getString(1); //colaborador_id
+
+    var results = conn2.prepareStatement('INSERT INTO PRINCIPAL ' +
+      '(semestre, programa, organizacion, total, fechainicio, fechafinal, colaboradorfk, asignaturafk)' +
+      'values (?, ?, ?, ?, ?, ?, ?, ?)');
+    results.setString(1, respuestas.dato3);
+    results.setString(2, respuestas.dato4);
+    results.setString(3, respuestas.dato5);
+    results.setString(4, respuestas.dato6);
+    results.setString(5, respuestas.dato19);
+    results.setString(6, respuestas.dato20);
+    results.setString(7, colaboradorlast);
+    results.setString(8, asignaturalast);
+    results.execute();
+
+    //Obteniendo el valor de tipo de material (Módulo, Unidad, Tema, Secuencia)
+    var elementofk = stmt.executeQuery(`select id from ELEMENTO where nombre='${respuestas.dato5}'`);
+    var numCols = elementofk.getMetaData().getColumnCount();
+    while (elementofk.next()) {
+      var elementoFK = '';
+      for (var col = 0; col < numCols; col++) {
+        elementoFK += elementofk.getString(col + 1) + "\n";
+      }
+    } //while
+
+    //Inserción del tipo material (Sitio público, Escritorio y Componentes Generales)
+    for (var i = 0; i < 3; i++) {
+      var results = conn2.prepareStatement('INSERT INTO PROYECTO_ELEMENTO'
+        + '(asignaturafk, elementofk, numero, avance, calificacion)'
+        + 'values (?, ?, ?, ?, ?)');
+      results.setString(1, asignaturalast);
+      results.setString(2, i + 1);
+      results.setString(3, 0);
+      results.setString(4, 0);
+      results.setString(5, 0);
+      results.execute();
+    }
+
+    //Inserción del tipo material (Módulo, Unidad, Tema, Secuencia)
+    for (var i = 0; i < respuestas.total; i++) {
+      var results = conn2.prepareStatement('INSERT INTO PROYECTO_ELEMENTO'
+        + '(asignaturafk, elementofk, numero, avance, calificacion)'
+        + 'values (?, ?, ?, ?, ?)');
+      results.setString(1, asignaturalast);
+      results.setString(2, elementoFK);
+      results.setString(3, i + 1);
+      results.setString(4, 0);
+      results.setString(5, 0);
+      results.execute();
+    }
+
+
+  }//longitud21
+
+  if (Object.keys(respuestas).length == 20.0) {
+
+    var stmt = conn2.createStatement();
+    //Query para obtener el id de la dependencia
+    var nombreDependencia = stmt.executeQuery(`select id from DEPENDENCIA where (nombre='${respuestas.dato0}')`);
+    var numCols = nombreDependencia.getMetaData().getColumnCount();
+    while (nombreDependencia.next()) {
+      var dependencia_id = '';
+      for (var col = 0; col < numCols; col++) {
+        dependencia_id += nombreDependencia.getString(col + 1) + "\n";
+      }
+    } //while
+
+    //Inserción en asignatura
+    var results = conn2.prepareStatement('INSERT INTO PROYECTO ' +
+      '(nombre, inicial_proy, dependenciafk)' +
+      'values (?, ?, ?)');
+    results.setString(1, respuestas.dato1);
+    results.setString(2, respuestas.dato1.replace(' de ', '').split(/\s/).reduce((response, Word) => response += Word.slice(0, 1), ''));
+    results.setString(3, dependencia_id);
+    results.execute();
+
+    var maximo = stmt.executeQuery('select last_insert_id();');
+    maximo.next();
+    var proyectolast = maximo.getString(1); //proyecto_id
+
+    //Inserción en asignatura
+    var results = conn2.prepareStatement('INSERT INTO ASIGNATURA ' +
+      '(asignatura, dependenciafk, proyectofk)' +
+      'values (?, ?, ?)');
+    results.setString(1, respuestas.dato2);
+    results.setString(2, dependencia_id);
+    results.setString(3, proyectolast);
+    results.execute();
+
+    var maximo = stmt.executeQuery('select last_insert_id();');
+    maximo.next();
+    var asignaturalast = maximo.getString(1); //asignatura_id
+
+    var colaboradores = stmt.executeQuery(`select id from COLABORDOR_BASE 
+    where (nombre='${respuestas.dato9}' and nombre='${respuestas.dato10}' and nombre='${respuestas.dato11}' 
+    and nombre='${respuestas.dato13}' and nombre='${respuestas.dato15}' and nombre='${respuestas.dato16}')`);
+
+    var colabo_array = [];
+    while (colaboradores.next()) {
+      for (var x = 1; x <= colaboradores.getMetaData().getColumnCount(); x++) {
+        colabo_array.push(colaboradores.getString(x));
+      }
+    }
+    var results = conn2.prepareStatement('INSERT INTO COLABORADOR ' +
+      '(academico, correo, listadistribucion, admin, RDI, CDI, RCE, RCV, CCV) values (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+    results.setString(1, respuestas.dato6);
+    results.setString(2, respuestas.dato7);
+    results.setString(3, respuestas.dato8);
+    results.setString(4, colabo_array[0]);
+    results.setString(5, colabo_array[1]);
+    results.setString(6, colabo_array[2]);
+    results.setString(7, colabo_array[3]);
+    results.setString(8, colabo_array[4]);
+    results.setString(9, colabo_array[5]);
+    results.execute();
+
+    var maximo = stmt.executeQuery('select last_insert_id();');
+    maximo.next();
+    var colaboradorlast = maximo.getString(1); //colaborador_id
+
+    var results = conn2.prepareStatement('INSERT INTO PRINCIPAL ' +
+      '(semestre, programa, organizacion, total, fechainicio, fechafinal, colaboradorfk, asignaturafk)' +
+      'values (?, ?, ?, ?, ?, ?, ?, ?)');
+    results.setString(1, "");
+    results.setString(2, respuestas.dato3);
+    results.setString(3, respuestas.dato4);
+    results.setString(4, respuestas.dato5);
+    results.setString(5, respuestas.dato18);
+    results.setString(6, respuestas.dato19);
+    results.setString(7, colaboradorlast);
+    results.setString(8, asignaturalast);
+    results.execute();
+    //Obteniendo el valor de tipo de material (Módulo, Unidad, Tema, Secuencia)
+    var elementofk = stmt.executeQuery(`select id from ELEMENTO where nombre='${respuestas.dato5}'`);
+    var numCols = elementofk.getMetaData().getColumnCount();
+    while (elementofk.next()) {
+      var elementoFK = '';
+      for (var col = 0; col < numCols; col++) {
+        elementoFK += elementofk.getString(col + 1) + "\n";
+      }
+    } //while
+
+    //Inserción del tipo material (Sitio público, Escritorio y Componentes Generales)
+    for (var i = 0; i < 3; i++) {
+      var results = conn2.prepareStatement('INSERT INTO PROYECTO_ELEMENTO'
+        + '(asignaturafk, elementofk, numero, avance, calificacion)'
+        + 'values (?, ?, ?, ?, ?)');
+      results.setString(1, asignaturalast);
+      results.setString(2, i + 1);
+      results.setString(3, 0);
+      results.setString(4, 0);
+      results.setString(5, 0);
+      results.execute();
+    }
+
+    //Inserción del tipo material (Módulo, Unidad, Tema, Secuencia)
+    for (var i = 0; i < respuestas.total; i++) {
+      var results = conn2.prepareStatement('INSERT INTO PROYECTO_ELEMENTO'
+        + '(asignaturafk, elementofk, numero, avance, calificacion)'
+        + 'values (?, ?, ?, ?, ?)');
+      results.setString(1, asignaturalast);
+      results.setString(2, elementoFK);
+      results.setString(3, i + 1);
+      results.setString(4, 0);
+      results.setString(5, 0);
+      results.execute();
+    }
+  }//longitud20
+
+  results = stmt.execute('COMMIT;'); //Se ejecuta el commit explícito para ejecutar toda la transacción
+  stmt.close();
+  conn2.close();
+}//funcion guardar datos
+
+function crearFormulario() {
+  var item = form.addListItem(); // lista desplegable
+  //Añadir la consulta de la BD
+
+  item.setTitle('Dependencia')
+  item.setRequired(true)
+    .setChoices([
+      item.createChoice('Dependencia 1'),
+      item.createChoice('Dependencia 2')
+    ]);
+
+
+  var item = form.addParagraphTextItem();
+  item.setTitle('Nombre 1');
+  item.setRequired(true)
+
+  var item = form.addParagraphTextItem();
+  item.setTitle('Nombre 2');
+
+  var itemList = form.addListItem();
+  itemList.setTitle('Semestre');
+  var semestre = []
+
+  for (var i = 0; i < 13; i++) {
+    if (i == 12) {
+      semestre.push("Optativa")
+    } else {
+      semestre.push((i + 1).toString())
+    }
+  }
+  itemList.setChoiceValues(semestre.join(',').split(","))
+
+  var item = form.addListItem(); // lista desplegable
+  item.setRequired(true)
+  item.setTitle('Tipo de programa académico')
+    .setChoices([
+      item.createChoice('Aplicación'),
+      item.createChoice('Asignatura'),
+      item.createChoice('Curso'),
+      item.createChoice('Diplomado'),
+      item.createChoice('EPUB'),
+      item.createChoice('UAPA')
+    ]);
+
+
+  var item = form.addListItem(); // lista desplegable
+  item.setTitle('Organización del programa académico')
+    .setChoices([
+      item.createChoice('Módulo'),
+      item.createChoice('Unidad'),
+      item.createChoice('Tema'),
+      item.createChoice('Secuencia')
+    ]);
+  item.setRequired(true)
+
+  var itemList = form.addListItem();
+  itemList.setRequired(true)
+  itemList.setTitle('Total de módulos-unidades-temas');
+  var total = []
+  for (var i = 0; i < 15; i++) {
+    total.push((i + 1).toString())
+  }
+  itemList.setChoiceValues(total.join(',').split(","))
+
+
+  var item = form.addParagraphTextItem();
+  item.setTitle('Coordinador acádemico de la entidad');
+
+  var item = form.addParagraphTextItem();
+  item.setTitle('Correo electrónico del coordinador académico');
+
+  var item = form.addParagraphTextItem();
+  item.setTitle('Lista de distribución');
+
+  form.addPageBreakItem()
+
+  var item = form.addListItem(); // lista desplegable
+  item.setTitle('Administrador del proyecto')
+    .setChoices([
+      item.createChoice('Juan Luis Becerril Gutiérrez'),
+      item.createChoice('Leónides Villanueva Gutiérrez'),
+      item.createChoice('Moisés Cenobio Fraire Benítez')
+    ]);
+  item.setRequired(true)
+
+  form.addPageBreakItem()
+    .setTitle('Diseño Instruccional');
+
+  var item = form.addListItem(); // lista desplegable
+  item.setTitle('Responsable')
+    .setChoices([
+      item.createChoice('Elisa Campero Malo')
+    ]);
+  item.setRequired(true)
+  var item = form.addListItem(); // lista desplegable
+  item.setTitle('Coordinador')
+    .setChoices([
+      item.createChoice('Elisa Campero  Malo'),
+      item.createChoice('Lucía Mendoza Campero'),
+    ]);
+  item.setRequired(true)
+
+  var item = form.addListItem(); // lista desplegable
+  item.setTitle('Asesor pedagógico asignado')
+    .setChoices([
+      item.createChoice('Abraham Daniel Hernández Fabián'),
+      item.createChoice('Alejandra Serrato Minjarez'),
+    ]);
+  item.setRequired(true)
+
+  form.addPageBreakItem()
+    .setTitle('Correción de Estilo');
+
+  var item = form.addListItem(); // lista desplegable
+  item.setTitle('Responsable')
+    .setChoices([
+      item.createChoice('Brenda Gómez Sánchez')
+    ]);
+  item.setRequired(true)
+  var item = form.addListItem(); // lista desplegable
+  item.setRequired(true)
+  item.setTitle('Corrector de Estilo asignado')
+    .setChoices([
+      item.createChoice('Carlos Álvarez Rosas'),
+      item.createChoice('Edgar Isaac Navarro Martínez'),
+    ]);
+
+  form.addPageBreakItem()
+    .setTitle('Multimedia');
+
+  var item = form.addListItem(); // lista desplegable
+  item.setRequired(true)
+  item.setTitle('Responsable')
+    .setChoices([
+      item.createChoice('Juan de Dios Fuentes Reyes')
+    ]);
+
+  var item = form.addListItem(); // lista desplegable
+  item.setTitle('Coordinador')
+    .setChoices([
+      item.createChoice('Isaura Anaid Ovando Vázquez'),
+      item.createChoice('Fabiola Moncada Cortés'),
+    ]);
+  item.setRequired(true)
+
+  var item = form.addListItem(); // lista desplegable
+  item.setTitle('Comunicador visual asignado')
+    .setChoices([
+      item.createChoice('Angel Uriel flamenco Aguirre'),
+      item.createChoice('Arceli Arely Omaña Vázquez'),
+    ]);
+  item.setRequired(true)
+
+  form.addPageBreakItem()
+    .setTitle('Fechas');
+
+  form.addDateItem()
+    .setTitle('Inicio del proyecto');
+  form.addDateItem()
+    .setTitle('Fin del proyecto');
+
+}
