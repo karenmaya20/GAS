@@ -15,6 +15,7 @@ var conn2 = Jdbc.getCloudSqlConnection(dbUrl, root, rootPwd);
 var respuestas = {}
 var form = FormApp.openById('1fo8JYZ_4KN5O9JY6yKyxHUgxaBDMsVfrlv_a-CBtvOg');
 
+
 function guardarDatos() {
   var formResponses = form.getResponses();
   form.setAllowResponseEdits(true)//habilita la opción de recuperar las respuestas
@@ -403,11 +404,19 @@ function crearFormulario() {
   var item = form.addParagraphTextItem();
   item.setTitle('Coordinador acádemico de la entidad');
 
-  var item = form.addParagraphTextItem();
-  item.setTitle('Correo electrónico del coordinador académico');
+  var textItem = form.addTextItem().setTitle('Correo electrónico del coordinador académico');
+  var textValidation = FormApp.createTextValidation()
+    .requireTextIsEmail() 
+    .build();
+  textItem.setValidation(textValidation);
 
-  var item = form.addParagraphTextItem();
-  item.setTitle('Lista de distribución');
+
+  var textItem = form.addTextItem().setTitle('Lista de distribución');
+  var textValidation = FormApp.createTextValidation()
+    .requireTextIsEmail() 
+    .build();
+  textItem.setValidation(textValidation);
+
 
   form.addPageBreakItem()
 
