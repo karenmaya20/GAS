@@ -1,0 +1,42 @@
+var connectionName = 'spbd2021:us-central1:spbd2021'; //instancia
+  var rootPwd = 'root';
+  var db = 'proyectos2'; //nombre de la base a crear
+  var root = 'root';
+  var instanceUrl = 'jdbc:google:mysql://' + connectionName;  
+  var dbUrl = instanceUrl + '/' + db; 
+  var respuestas = {}//Arreglo de respuestas del spreadsheet
+  var conn2 = Jdbc.getCloudSqlConnection(dbUrl, root, rootPwd);  
+
+function registroDependencia() {
+  var form = FormApp.openById('1LQvknh0Su4GaulcRRD9pc6Hv4ODq2j1Am5r4NVPYRrg');
+  var formResponses = form.getResponses();
+  form.setAllowResponseEdits(true)//habilita la opción de recuperar las respuestas
+  var formResponse = formResponses[formResponses.length - 1];//obtiene el ultimo registro del formulario
+  var itemResponses = formResponse.getItemResponses();
+  for (var j = 0; j < itemResponses.length; j++) {
+    var itemResponse = itemResponses[j];
+    switch (j) {
+      case 0.0:
+        respuestas.dependencia = itemResponse.getResponse();
+        break;
+      case 1.0:
+        respuestas.inicial_dep = itemResponse.getResponse();
+        break;
+      default:
+        Logger.log("Otro registro de Dependencias");
+        break;
+    }
+  } //itemResponses
+  var stmt = conn2.createStatement();//Se crea un objeto que modela una sentencia SQL conectado a un instacia de la BD
+  var results = stmt.execute('SET autocommit=0;');//Se habilita el commit manual
+  results = stmt.execute('START TRANSACTION;');//Se inicia una transacción
+
+  var results = conn2.prepareStatement('INSERT INTO DEPENDENCIA '
+    + '(nombre, inicial_dep) values (?, ?)');
+  results.setString(1, respuestas.dependencia);
+  results.setString(2, respuestas.inicial_dep);
+  results.execute();
+  results = stmt.execute('COMMIT;');
+  stmt.close();
+  conn2.close();
+}
