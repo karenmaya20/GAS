@@ -40,3 +40,14 @@ function registroDependencia() {
   stmt.close();
   conn2.close();
 }
+
+function crearFormulario(){
+    var form = FormApp.getActiveForm();
+    var item = form.addParagraphTextItem();
+    item.setTitle('Nombre de la dependencia');
+    item.setRequired(true)
+
+        var item = form.addParagraphTextItem();
+    item.setTitle('Inicial de la dependencia');
+    item.setRequired(true)
+}
